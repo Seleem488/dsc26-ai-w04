@@ -3,51 +3,69 @@
 ## Tools Used and Their Purpose
 
 - **ChatGPT:** Used as a coding assistant to understand assignment requirements, discuss algorithms, generate implementation ideas, review code, and troubleshoot issues.
-- **VS Code:** Used as the main development environment to write, edit, integrate, and maintain the Python implementation across project modules.
+- **VS Code:** Used as the main development environment to write, edit, and maintain the Python implementation.
 - **Python:** Used to implement and run the retrieval pipeline and evaluation scripts.
-- **uv and pytest:** Used to manage dependencies and run automated tests throughout development.
-- **PowerShell:** Used to execute commands, test different scenarios, and inspect retrieval results.
+- **uv and pytest:** Used to manage dependencies and run automated tests.
+- **PowerShell:** Used to execute commands, test scenarios, and inspect retrieval results.
 
-I actively participated in implementing the project by writing and modifying Python code, integrating the different modules, testing the implementation, and making technical decisions. AI-generated suggestions were treated as assistance rather than final solutions, and I reviewed and tested the code before using it.
+I actively participated in implementing the project by reviewing AI-generated suggestions, modifying the code, integrating modules, running tests, and making technical decisions. AI-generated code was not accepted without review and testing.
 
-## Reviewing AI-Assisted Chunking and BM25 Code
+## Reviewing AI-Assisted Code
 
-I reviewed the AI-assisted chunking and BM25 implementations against the assignment requirements instead of relying only on whether the code executed successfully.
+I reviewed the AI-assisted chunking and BM25 implementations against the assignment requirements.
 
-For chunking, I tested empty and whitespace-only documents, long unbroken tokens, chunk boundaries, overlap limits, and exact source-offset preservation. I also checked that chunks respect the maximum character limit and that all non-whitespace characters remain covered without gaps.
+For chunking, I tested:
+- Empty and whitespace-only documents.
+- Long unbroken tokens.
+- Maximum chunk length and overlap limits.
+- Exact source-offset preservation.
+- Coverage of non-whitespace characters without gaps.
+- Chunk boundaries and deterministic IDs.
 
-For BM25, I checked the implementation against the required inverse document frequency formula, term frequency calculation, document frequency counting, query-term handling, document-length normalization, and deterministic result ordering.
+For BM25, I checked:
+- The required inverse document frequency formula.
+- Term frequency and document frequency calculations.
+- Document-length normalization.
+- Query-term handling.
+- Deterministic score ordering and top-k limits.
 
-I did not identify a confirmed specification-breaking bug in the final chunking or BM25 implementations during these checks. Therefore, I have not claimed to fix an unverified issue or invented a bug report. The implementations were reviewed against the stated requirements and tested with the available test suite.
+I did not identify a confirmed specification-breaking bug in the final chunking or BM25 implementations during these checks, so I have not claimed to fix an issue that I could not reproduce.
+
+During citation formatting review, however, I found an issue in the AI-assisted truncation logic: it reserved a character for the ellipsis before selecting the quote, instead of first taking the allowed maximum length and then cutting back to the last complete word. I corrected the logic and reran the test suite.
 
 ## Retrieval Evaluation
 
-The evaluation used all 8 contracts in `data/contracts/`, with `chunk_text(..., max_chars=500, overlap=50)`, `HashingEmbedder()`, and the 12 queries in `data/queries.jsonl`.
+The evaluation used all 8 contracts in `data/contracts/`, with:
+- `chunk_text(max_chars=500, overlap=50)`
+- `HashingEmbedder()`
+- The 12 public queries in `data/queries.jsonl`
 
-A retrieved chunk was considered relevant if its span overlapped one of the query's relevant ranges in the same document.
+A retrieved chunk was considered relevant when its span overlapped a relevant range for the same document.
 
 ### Results
 
-| Retriever | Recall@3 | Queries missed |
-|---|---:|---|
-| BM25 only | 0.9167 (11/12) | q12 |
-| Dense only (HashingEmbedder) | 0.9167 (11/12) | q12 |
-| Hybrid (RRF) | 0.9167 (11/12) | q12 |
+| Retriever | Recall@3 | Successful Queries | Missed Queries |
+|---|---:|---:|---|
+| BM25 only | 0.9167 | 11/12 | q12 |
+| Dense only (HashingEmbedder) | 0.9167 | 11/12 | q12 |
+| Hybrid (RRF) | 0.9167 | 11/12 | q12 |
 
 ### Analysis
 
-The only missed query for all three retrieval methods was q12, which asks about the governing law and competent court in the agency agreement.
+The only missed query was q12:
 
-Several contracts contain nearly identical governing-law clauses. This makes it difficult for lexical retrieval and the character n-gram-based `HashingEmbedder` to distinguish the correct document based on clause text alone.
+> governing law and competent court for the agency agreement
 
-The hybrid retriever combines BM25 and dense rankings using Reciprocal Rank Fusion (RRF). However, on this evaluation set, combining the two rankings did not improve Recall@3 over either method individually.
+The relevant passage is in `agency_bi_08`. Several contracts contain very similar governing-law clauses, making it difficult for lexical retrieval and the character n-gram-based `HashingEmbedder` to distinguish the correct document using clause text alone.
 
-The relevant agency-agreement chunk ranked fourth in BM25 and eighth in the hybrid top 10. This indicates that similar clauses across different contracts remain difficult to distinguish using the current retrieval configuration.
+The relevant agency-agreement chunk ranked fourth in BM25 and eighth in the hybrid top 10. Dense retrieval also failed to rank a relevant agency chunk in its top three.
+
+The hybrid retriever combines BM25 and dense rankings using Reciprocal Rank Fusion (RRF). However, it did not improve Recall@3 over either method individually on this evaluation set because both retrieval methods struggled with the same query.
 
 ### Additional Experiment
 
-I also experimented with adding document-title context to retrieval. In that separate experiment, Hybrid Recall@3 reached 1.0000 (12/12), and the relevant agency-agreement chunk ranked second.
+I also tested adding document-title context to retrieval. In that separate experiment, Hybrid Recall@3 reached 1.0000 (12/12), and the relevant agency-agreement chunk ranked second.
 
-However, document-title context is not included in the final implementation evaluated in the results above. This experiment suggests that document-level context could help distinguish similar clauses across contracts and is worth investigating further.
+This experiment is not part of the final implementation or the results reported above. It suggests that document-level context may help distinguish similar clauses across contracts.
 
-Other possible improvements include testing a real multilingual embedding model or adding a reranker, followed by evaluation on a larger query set.
+Other possible improvements include testing a real multilingual embedding model and integrating a reranker, then evaluating them on a larger query set.

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from bayyina.types import Chunk, Embedder, Hit, Reranker
 from bayyina.bm25 import BM25Index
+from bayyina.types import Chunk, Embedder, Hit, Reranker
 
 
 def rrf(

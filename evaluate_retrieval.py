@@ -9,7 +9,6 @@ from bayyina.chunking import chunk_text
 from bayyina.embedder import HashingEmbedder
 from bayyina.hybrid import HybridRetriever
 
-
 ROOT = Path(__file__).resolve().parent
 CONTRACTS_DIR = ROOT / "data" / "contracts"
 QUERIES_FILE = ROOT / "data" / "queries.jsonl"
